@@ -15,7 +15,7 @@ class LoginApp(QMainWindow):
         self.setFixedSize(400, 350)
 
         # Conexão com o banco de dados SQLite
-        self.conn = sqlite3.connect("//172.16.17.18/depto/Suporte/Geral/Usuarios/Adson/usuario.db")
+        self.conn = sqlite3.connect("usuario.db")
         self.criar_tabela_usuarios()
 
         # Layout principal
