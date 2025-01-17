@@ -1,72 +1,198 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import QMessageBox, QFileDialog, QDialog
 import sqlite3
+import sys
 import pandas as pd
 from datetime import datetime
 from random import seed, randint
 seed(42)  # Para gerar cores consistentes
 
+
 class FiltroAvancadoDialog(QDialog):
-        def __init__(self, colunas, permissao, parent=None):
-            super().__init__(parent)
-            self.setWindowTitle("Filtro Avançado")
-            # Ajusta o tamanho da janela no cento da tela
-            screen = QtWidgets.QDesktopWidget().screenGeometry()
-            self.move((screen.width() - 300) // 2, (screen.height() - 300) // 2)
-            self.setFixedSize(300, 300)
-            self.permissao = permissao
+    def __init__(self, colunas, permissao, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Filtro Avançado")
+         # Definir tamanho mínimo e máximo da janela
+        self.setMinimumSize(800, 600)
+        self.setMaximumSize(1920, 1080)
+        # Ajusta o tamanho da janela no cento da tela
+        screen = QtWidgets.QDesktopWidget().screenGeometry()
+        self.move((screen.width() - 300) // 2, (screen.height() - 300) // 2)
+        self.setFixedSize(300, 300)
+        self.permissao = permissao
 
-            # Limita as colunas disponíveis para usuários com permissão limitada
-            if self.permissao == "limitado":
-                self.colunas = ["Cliente", "Ordem Service"]
-            else:
-                self.colunas = colunas
+        # Limita as colunas disponíveis para usuários com permissão limitada
+        if self.permissao == "operacaopax":
+            self.colunas = ["Cliente", "Ordem Service"]
+        else:
+            # tirar o ID da filtragem
+            colunas = [coluna for coluna in colunas if coluna != "id"]
+            self.colunas = colunas
 
-            self.setup_ui()
+        self.setup_ui()
+    def setup_ui(self):
+        layout = QtWidgets.QVBoxLayout(self)
 
-        def setup_ui(self):
-            layout = QtWidgets.QVBoxLayout(self)
+        # Aplicar estilo CSS para o texto dos widgets
+        style = """
+        QComboBox, QLabel, QLineEdit {
+            font-size: 20px;
+        }
+        """
+        self.setStyleSheet(style)
 
-            self.coluna_combobox = QtWidgets.QComboBox()
-            self.coluna_combobox.addItems(self.colunas)
-            layout.addWidget(QtWidgets.QLabel("Selecionar Coluna:"))
-            layout.addWidget(self.coluna_combobox)
+        self.coluna_combobox = QtWidgets.QComboBox()
+        self.coluna_combobox.addItems(self.colunas)
+        layout.addWidget(QtWidgets.QLabel("Selecionar Coluna:"))
+        layout.addWidget(self.coluna_combobox)
 
-            self.operador_combobox = QtWidgets.QComboBox()
-            self.operador_combobox.addItems(["=", "LIKE"])
-            layout.addWidget(QtWidgets.QLabel("Selecionar Operador:"))
-            layout.addWidget(self.operador_combobox)
+        self.operador_combobox = QtWidgets.QComboBox()
+        self.operador_combobox.addItems(["=", "LIKE"])
+        layout.addWidget(QtWidgets.QLabel("Selecionar Operador:"))
+        layout.addWidget(self.operador_combobox)
 
-            self.valor_input = QtWidgets.QLineEdit()
-            layout.addWidget(QtWidgets.QLabel("Valor para Filtrar:"))
-            layout.addWidget(self.valor_input)
+        self.valor_input = QtWidgets.QLineEdit()
+        layout.addWidget(QtWidgets.QLabel("Valor para Filtrar:"))
+        layout.addWidget(self.valor_input)
 
-            button_box = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
-            button_box.accepted.connect(self.accept)
-            button_box.rejected.connect(self.reject)
-            layout.addWidget(button_box)
+        button_box = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
 
-        def get_filter(self):
-            coluna = self.coluna_combobox.currentText()
-            operador = self.operador_combobox.currentText()
-            valor = self.valor_input.text().strip()
-            return coluna, operador, valor
+    def get_filter(self):
+        coluna = self.coluna_combobox.currentText()
+        operador = self.operador_combobox.currentText()
+        valor = self.valor_input.text().strip()
+        return coluna, operador, valor
+
+class EditarModal(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.setWindowTitle("Editar Registros")
+        self.layout = QtWidgets.QVBoxLayout(self)
+
+        self.inputs_por_linha = []
+
+        # Lista das colunas editáveis
+        self.colunas_editaveis = [
+            "Modelo", "Part Number", "Serial Number", "Versao SO", "Versao Boot", 
+            "DebugOuRelease", "PUK", "Versao Radio", "Versao App", "Configurador", 
+            "Perfil Chaves", "Preparador", "Obs", "Status"
+        ]
+
+    def set_data_multiplas_linhas(self, dados_linhas):
+        """Configura os placeholders com os dados de múltiplas linhas."""
+        for dados in dados_linhas:
+            inputs = []
+            linha_layout = QtWidgets.QHBoxLayout()
+
+            for col, valor in zip(self.colunas_editaveis, dados):
+                if col == "DebugOuRelease":
+                    combobox = QtWidgets.QComboBox()
+                    combobox.addItems(["DEBUG", "RELEASE"])
+                    combobox.setCurrentText(valor)
+                    linha_layout.addWidget(combobox)
+                    inputs.append(combobox)
+                elif col == "Status":
+                    combobox = QtWidgets.QComboBox()
+                    combobox.addItems(["PENDENTE", "CONCLUIDO"])
+                    combobox.setCurrentText(valor)
+                    linha_layout.addWidget(combobox)
+                    inputs.append(combobox)
+                else:
+                    # Criar campo de entrada e configurar placeholders
+                    input_field = QtWidgets.QLineEdit(valor if valor else "")
+                    if not valor or valor.strip().lower() in {"null", "none"}:
+                        input_field.clear()  # Limpa valores inválidos
+                        input_field.setPlaceholderText(f"{col.lower()}")  # Adiciona placeholder
+
+                    linha_layout.addWidget(input_field)
+                    inputs.append(input_field)
+
+            self.layout.addLayout(linha_layout)
+            self.inputs_por_linha.append(inputs)
+
+        # Botão para limpar valores
+        self.clear_button = QtWidgets.QPushButton("Limpar Campos Vazios")
+        self.clear_button.clicked.connect(self.limpar_campos)
+        self.clear_button.setFixedSize(200, 30)
+        self.clear_button.setStyleSheet(
+            "background-color: #DC143C; color: white; font-weight: bold;"
+        )
+        self.clear_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
+        self.layout.addWidget(self.clear_button)
+        self.clear_button.hide()
+
+        # Botão Salvar
+        self.save_button = QtWidgets.QPushButton("Salvar")
+        self.save_button.clicked.connect(self.accept)
+        self.save_button.setFixedSize(200, 30)
+        self.save_button.setStyleSheet(
+            "background-color: #228B22; color: white; font-weight: bold;"
+        )
+        self.save_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
+        self.layout.addWidget(self.save_button)
+
+    def limpar_campos(self):
+        """Limpa campos com valores None, NULL ou vazios e configura placeholders."""
+        for inputs in self.inputs_por_linha:
+            for input_field in inputs:
+                if isinstance(input_field, QtWidgets.QLineEdit):
+                    if not input_field.text() or input_field.text().strip().lower() in {"null", "none"}:
+                        input_field.clear()
+                        input_field.setPlaceholderText(f"{input_field.placeholderText()}")  # Mantém o placeholder
+
+    def get_data_multiplas_linhas(self):
+        """Retorna os dados editados de todas as linhas."""
+        return [
+            [
+                input_field.currentText().strip() if isinstance(input_field, QtWidgets.QComboBox)
+                else input_field.text().strip()
+                for input_field in inputs
+            ]
+            for inputs in self.inputs_por_linha
+        ]
+
 
 class TelaOrdem(QtWidgets.QMainWindow):
     def __init__(self, username, permissao):
         super().__init__()
         self.setWindowTitle("Manipulação de Banco de Dados e Filtros")
-        self.setGeometry(100, 100, 1400, 800)
-        
+
+        # Obter a geometria da tela
+        screen = QtWidgets.QApplication.primaryScreen()
+        screen_geometry = screen.availableGeometry()
+        screen_width, screen_height = screen_geometry.width(), screen_geometry.height()
+
+        # Define o tamanho inicial da janela com base na resolução
+        window_width, window_height = 1890, 820  # Dimensões iniciais padrão
+        x_position = (screen_width - window_width) // 2
+        y_position = (screen_height - window_height) // 2
+
+        # Configura a geometria inicial da janela
+        self.setGeometry(x_position, y_position, window_width, window_height)
+
+        # Permitir que a janela seja redimensionada manualmente
+        self.setMinimumSize(640, 480)  # Define um tamanho mínimo razoável
+
+        # Oculta somente o botão de fechar
+        self.setWindowFlags(
+            QtCore.Qt.Window | QtCore.Qt.WindowMinMaxButtonsHint | QtCore.Qt.CustomizeWindowHint
+        )
+
+    
         self.username = username
         self.permissao = permissao
-        
+
         self.conn = sqlite3.connect("dados.db")
         self.cursor = self.conn.cursor()
         self.criar_tabela()
-        
+
         self.colunas = [
-            "Cliente", "Modelo", "Part Number", "Serial Number", "Versao SO",
+            "id","Cliente", "Modelo", "Part Number", "Serial Number", "Versao SO",
             "Versao Boot", "DebugOuRelease", "PUK", "Versao Radio",
             "Versao App", "Configurador", "Perfil Chaves", "Preparador",
             "Obs", "Ordem Service", "Status", "Data Envio"
@@ -78,20 +204,21 @@ class TelaOrdem(QtWidgets.QMainWindow):
             "Versão Radio", "Versão App", "Configurador",
             "Perfil Chaves", "Preparador", "Obs", "Ordem Service", "Status"
         ]
-        
+
         self.dados_filtrados = []  # Lista para armazenar dados filtrados
         self.input_rows = []
         self.setup_ui()
         self.carregar_dados()
-        
+
     def criar_tabela(self):
         self.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS ordem (
-            Cliente TEXT NOT NULL,
-            Modelo TEXT NOT NULL,
+        CREATE TABLE IF NOT EXISTS appordem (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            Cliente TEXT,
+            Modelo TEXT,
             PartNumber TEXT,
-            SerialNumber TEXT NOT NULL,
-            VersaoSO TEXT NOT NULL,
+            SerialNumber TEXT,
+            VersaoSO TEXT,
             VersaoBoot TEXT,
             ModoDebugRelease TEXT,
             PUK TEXT,
@@ -99,7 +226,7 @@ class TelaOrdem(QtWidgets.QMainWindow):
             VersaoApp TEXT,
             Configurador TEXT,
             PerfilChave TEXT,
-            Preparador TEXT NOT NULL,
+            Preparador TEXT,
             Obs TEXT,
             OrdemService TEXT,
             Status TEXT,
@@ -107,7 +234,7 @@ class TelaOrdem(QtWidgets.QMainWindow):
         )
         """)
         self.conn.commit()
-
+    
     def setup_ui(self):
         # Criação do layout principal
         print("Inicializando a interface...")
@@ -115,37 +242,47 @@ class TelaOrdem(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout(central_widget)
 
         # Label do usuário
-        user_label = QtWidgets.QLabel(f"Usuário logado: {self.username}")
+        # user_label = QtWidgets.QLabel(f"Usuário logado: {self.username}")
+        user_label = QtWidgets.QLabel(f"Usuário logado: {self.username} ({self.permissao.upper()})")
         user_label.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
         layout.addWidget(user_label)
 
         # Layout para o botão "Exportar Dados" acima da tabela
-        if self.permissao == "total":
+        if self.permissao == "suporte":
             export_layout = QtWidgets.QHBoxLayout()
             export_button = QtWidgets.QPushButton("Exportar Dados")
             export_button.clicked.connect(self.exportar_dados)
-            export_button.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
+            export_button.setStyleSheet(
+                "background-color: #3498db; color: white; font-weight: bold;")
             export_layout.addWidget(export_button)
-            export_layout.addStretch()  
-            layout.addLayout(export_layout)  # Adiciona o layout com o botão acima da tabela
+            export_layout.addStretch()
+            # Adiciona o layout com o botão acima da tabela
+            layout.addLayout(export_layout)
 
         # Layout para os botões de filtro acima da tabela e alinhados à direita
         filter_layout = QtWidgets.QHBoxLayout()
-        filter_layout.addStretch()  # Adiciona espaço flexível para empurrar os botões para a direita
+        # Adiciona espaço flexível para empurrar os botões para a direita
+        filter_layout.addStretch()
 
         filter_advanced_button = QtWidgets.QPushButton("Filtro Avançado")
         filter_advanced_button.clicked.connect(self.abrir_filtro_avancado)
-        filter_advanced_button.setStyleSheet("background-color: #f39c12; color: white; font-weight: bold;")
-        filter_advanced_button.setFont(QtGui.QFont("Helvetica", 11, QtGui.QFont.Bold))
+        filter_advanced_button.setStyleSheet(
+            "background-color: #f39c12; color: white; font-weight: bold;")
+        filter_advanced_button.setFont(
+            QtGui.QFont("Helvetica", 11, QtGui.QFont.Bold))
         filter_layout.addWidget(filter_advanced_button)
 
         clear_advanced_filter_button = QtWidgets.QPushButton("Limpar Filtro")
-        clear_advanced_filter_button.clicked.connect(self.limpar_filtro_avancado)
-        clear_advanced_filter_button.setStyleSheet("background-color: #6495ED; color: white; font-weight: bold;")
-        clear_advanced_filter_button.setFont(QtGui.QFont("Helvetica", 11, QtGui.QFont.Bold))
+        clear_advanced_filter_button.clicked.connect(
+            self.limpar_filtro_avancado)
+        clear_advanced_filter_button.setStyleSheet(
+            "background-color: #6495ED; color: white; font-weight: bold;")
+        clear_advanced_filter_button.setFont(
+            QtGui.QFont("Helvetica", 11, QtGui.QFont.Bold))
         filter_layout.addWidget(clear_advanced_filter_button)
 
-        layout.addLayout(filter_layout)  # Adiciona o layout com os botões de filtro acima da tabela
+        # Adiciona o layout com os botões de filtro acima da tabela
+        layout.addLayout(filter_layout)
 
         # Criação do QTableWidget
         self.table = QtWidgets.QTableWidget()
@@ -153,55 +290,103 @@ class TelaOrdem(QtWidgets.QMainWindow):
         self.table.setColumnCount(len(self.colunas))
         self.table.setHorizontalHeaderLabels(self.colunas)
         self.table.setAlternatingRowColors(True)
-        self.table.itemChanged.connect(self.colorir_status)  # Adiciona o evento para colorir dinamicamente
+        # self.table.setEditTriggers(QtWidgets.QAbstractItemView.AllEditTriggers)  # Permitir edição
+        self.table.setEditTriggers(QtWidgets.QAbstractItemView.AllEditTriggers if self.permissao == "suporte" else QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.table.setSelectionBehavior(QtWidgets.QTableView.SelectRows)
+        self.table.setSelectionMode(QtWidgets.QTableView.MultiSelection)
+        # Adiciona o evento para colorir dinamicamente
+        self.table.itemChanged.connect(self.colorir_status)
         layout.addWidget(self.table)
+        self.table.hideColumn(0)
 
         # Frame para os campos de entrada
         self.frame_inputs = QtWidgets.QFrame(self)
         self.frame_inputs.setLayout(QtWidgets.QVBoxLayout())
         layout.addWidget(self.frame_inputs)
 
+         # Adicionar uma linha inicial automaticamente
+        if self.permissao == "operacaopax":
+            self.configurar_campos_fixos()
+        else:
+            self.adicionar_linha()
+
+
         # Layout para os botões de ações gerais
         actions_layout = QtWidgets.QHBoxLayout()
-        actions_layout.setSpacing(35)  # Define o espaçamento entre os botões como 10px
-        actions_layout.setContentsMargins(0, 0, 0, 0)  # Remove margens adicionais
+        # Define o espaçamento entre os botões como 10px
+        actions_layout.setSpacing(35)
+        actions_layout.setContentsMargins(
+            0, 0, 0, 0)  # Remove margens adicionais 
 
-        if self.permissao == "total":
+        if self.permissao == "suporte":
             save_button = QtWidgets.QPushButton("Salvar Dados")
             save_button.clicked.connect(self.salvar_dados)
-            save_button.setStyleSheet("background-color: #228B22; color: white; font-weight: bold;")
+            save_button.setStyleSheet(
+                "background-color: #228B22; color: white; font-weight: bold;")
             save_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
             actions_layout.addWidget(save_button)
+            
+            edit_button = QtWidgets.QPushButton("Editar Linha")
+            edit_button.clicked.connect(self.editar_linha)
+            edit_button.setStyleSheet("background-color: #FF8C00; color: white; font-weight: bold;")
+            edit_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
+            actions_layout.addWidget(edit_button)
 
-            add_row_button = QtWidgets.QPushButton("Adicionar +campos Registro")
+            add_row_button = QtWidgets.QPushButton(
+                "Adicionar +campos Registro")
             add_row_button.clicked.connect(self.adicionar_linha)
-            add_row_button.setStyleSheet("background-color: #2F4F4F; color: white; font-weight: bold;")
-            add_row_button.setFont(QtGui.QFont("Helvetica", 10, QtGui.QFont.Bold))
+            add_row_button.setStyleSheet(
+                "background-color: #2F4F4F; color: white; font-weight: bold;")
+            add_row_button.setFont(QtGui.QFont(
+                "Helvetica", 10, QtGui.QFont.Bold))
             actions_layout.addWidget(add_row_button)
 
             remove_row_button = QtWidgets.QPushButton("Remover Linha")
             remove_row_button.clicked.connect(self.remover_linha)
-            remove_row_button.setStyleSheet("background-color: #DC143C; color: white; font-weight: bold;")
-            remove_row_button.setFont(QtGui.QFont("Helvetica", 10, QtGui.QFont.Bold))
+            remove_row_button.setStyleSheet(
+                "background-color: #DC143C; color: white; font-weight: bold;")
+            remove_row_button.setFont(QtGui.QFont(
+                "Helvetica", 10, QtGui.QFont.Bold))
             actions_layout.addWidget(remove_row_button)
 
-            update_status_button = QtWidgets.QPushButton("Atualizar Status para CONCLUÍDO")
-            update_status_button.clicked.connect(self.atualizar_status)
-            update_status_button.setStyleSheet("background-color: #3CB371; color: white; font-weight: bold;")
-            update_status_button.setFont(QtGui.QFont("Helvetica", 10, QtGui.QFont.Bold))
-            actions_layout.addWidget(update_status_button)
+            ultimo_registro_button = QtWidgets.QPushButton("Ultimo Registro")
+            ultimo_registro_button.clicked.connect(self.ir_para_ultimo_registro)
+            ultimo_registro_button.setStyleSheet(
+                "background-color: #00008B; color: white; font-weight: bold;")
+            ultimo_registro_button.setFont(
+                QtGui.QFont("Helvetica", 10, QtGui.QFont.Bold))
+            actions_layout.addWidget(ultimo_registro_button)
 
-        ultimo_registro_button = QtWidgets.QPushButton("Ultimo Registro")
-        ultimo_registro_button.clicked.connect(self.ir_para_ultimo_registro)
-        ultimo_registro_button.setStyleSheet("background-color: #00008B; color: white; font-weight: bold;")
-        ultimo_registro_button.setFont(QtGui.QFont("Helvetica", 10, QtGui.QFont.Bold))
-        actions_layout.addWidget(ultimo_registro_button)
+            sair_button = QtWidgets.QPushButton("Sair")
+            sair_button.clicked.connect(self.validar_saida)
+            sair_button.setStyleSheet(
+                "background-color: #A52A2A; color: white; font-weight: bold;")
+            sair_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
+            actions_layout.addWidget(sair_button)
 
-        sair_button = QtWidgets.QPushButton("Sair")
-        sair_button.clicked.connect(self.validar_saida)
-        sair_button.setStyleSheet("background-color: #A52A2A; color: white; font-weight: bold;")
-        sair_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
-        actions_layout.addWidget(sair_button)
+        # usuario operacaopax
+        if self.permissao == "operacaopax":
+            save_button = QtWidgets.QPushButton("Salvar Dados")
+            save_button.clicked.connect(self.salvar_registro_multiplas_vezes)
+            save_button.setStyleSheet(
+                "background-color: #228B22; color: white; font-weight: bold;")
+            save_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
+            actions_layout.addWidget(save_button)
+
+            ultimo_registro_button = QtWidgets.QPushButton("Ultimo Registro")
+            ultimo_registro_button.clicked.connect(self.ir_para_ultimo_registro)
+            ultimo_registro_button.setStyleSheet(
+                "background-color: #00008B; color: white; font-weight: bold;")
+            ultimo_registro_button.setFont(
+                QtGui.QFont("Helvetica", 10, QtGui.QFont.Bold))
+            actions_layout.addWidget(ultimo_registro_button)
+
+            sair_button = QtWidgets.QPushButton("Sair")
+            sair_button.clicked.connect(self.validar_saida)
+            sair_button.setStyleSheet(
+                "background-color: #A52A2A; color: white; font-weight: bold;")
+            sair_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
+            actions_layout.addWidget(sair_button)
 
         # Adiciona o layout dos botões ao layout principal
         layout.addLayout(actions_layout)
@@ -224,22 +409,26 @@ class TelaOrdem(QtWidgets.QMainWindow):
         """Abre o modal de filtro avançado."""
         dialog = FiltroAvancadoDialog(self.colunas, self.permissao, self)
         if dialog.exec() == QtWidgets.QDialog.Accepted:
-            filtros = [dialog.get_filter()]  # Obtém o filtro como uma lista de tuplas
+            # Obtém o filtro como uma lista de tuplas
+            filtros = [dialog.get_filter()]
             if not filtros[0][2]:  # Verifica se o valor do filtro está vazio
-                QMessageBox.warning(self, "Aviso", "Digite pelo menos um valor para filtrar.")
+                QMessageBox.warning(
+                    self, "Aviso", "Digite pelo menos um valor para filtrar.")
                 return
 
             # Verificar se todos os filtros têm exatamente três elementos
             for filtro in filtros:
                 if len(filtro) != 3:
-                    QMessageBox.critical(self, "Erro", "Formato de filtro inválido. Cada filtro deve conter exatamente três elementos: coluna, operador e valor.")
+                    QMessageBox.critical(
+                        self, "Erro", "Formato de filtro inválido. Cada filtro deve conter exatamente três elementos: coluna, operador e valor.")
                     return
 
             self.aplicar_filtro_avancado(filtros)
+
     def aplicar_filtro_avancado(self, filtros):
         """Aplica os filtros na tabela com base nos filtros fornecidos."""
         try:
-            query = "SELECT * FROM ordem WHERE "
+            query = "SELECT * FROM appordem WHERE "
             parametros = []
             for coluna, operador, valor in filtros:
                 coluna_db = coluna.replace(" ", "")
@@ -248,14 +437,16 @@ class TelaOrdem(QtWidgets.QMainWindow):
                 query += f"LOWER({coluna_db}) {operador} ? AND "
                 parametros.append(valor.lower())
             query = query[:-4]  # Remove o último " AND "
-            
+
             self.cursor.execute(query, parametros)
             dados_filtrados = self.cursor.fetchall()
             self.atualizar_table(dados_filtrados)
         except sqlite3.OperationalError as e:
-            QMessageBox.critical(self, "Erro", f"Erro na consulta SQL: {e}. Verifique se o nome da coluna está correto.")
+            QMessageBox.critical(self, "Erro", f"Erro na consulta SQL: {
+                                 e}. Verifique se o nome da coluna está correto.")
         except Exception as e:
-            QMessageBox.critical(self, "Erro", f"Erro ao aplicar o filtro: {e}")
+            QMessageBox.critical(
+                self, "Erro", f"Erro ao aplicar o filtro: {e}")
 
     def limpar_filtro_avancado(self):
         """Limpa o filtro avançado e restaura todos os dados na tabela."""
@@ -263,9 +454,11 @@ class TelaOrdem(QtWidgets.QMainWindow):
             # Limpa a entrada de filtro avançado, se houver
             self.dados_filtrados = []
             self.carregar_dados()
-            QMessageBox.information(self, "Sucesso", "Filtro avançado limpo com sucesso!")
+            QMessageBox.information(
+                self, "Sucesso", "Filtro avançado limpo com sucesso!")
         except Exception as e:
-            QMessageBox.critical(self, "Erro", f"Erro ao limpar o filtro avançado: {e}")
+            QMessageBox.critical(
+                self, "Erro", f"Erro ao limpar o filtro avançado: {e}")
 
     def gerar_cor(self, cliente):
         """Gera uma cor única baseada no nome do cliente."""
@@ -275,30 +468,44 @@ class TelaOrdem(QtWidgets.QMainWindow):
         b = (hash_cliente * 53) % 255
         return QtGui.QColor(r, g, b)
 
+    #                 self.aplicar_cor_status(item)
     def carregar_dados(self):
         """Carrega os dados do banco na tabela, aplica cores aos clientes e ao status."""
-        self.table.setRowCount(0)
-        self.cursor.execute("SELECT * FROM ordem")
-        for row_data in self.cursor.fetchall():
-            row_position = self.table.rowCount()
-            self.table.insertRow(row_position)
+        try:
+            self.table.setRowCount(0)  # Limpa a tabela antes de carregar novos dados
+            self.table.setUpdatesEnabled(False)  # Desabilita atualizações da tabela temporariamente
 
-            # Obtém o cliente da linha (assumindo que é a primeira coluna)
-            cliente = row_data[0]
-            cor_cliente = self.gerar_cor(cliente)
+            self.cursor.execute("SELECT * FROM appordem")
+            dados = self.cursor.fetchall()
 
-            for col_num, data in enumerate(row_data):
-                item = QtWidgets.QTableWidgetItem(str(data))
-                self.table.setItem(row_position, col_num, item)
+            self.table.setRowCount(len(dados))  # Define o número de linhas da tabela
 
-                # Aplica a cor ao cliente
-                if col_num == 0:  # Coluna 'Cliente'
-                    item.setBackground(cor_cliente)
-                    item.setForeground(QtGui.QColor("white"))
+            for row_position, row_data in enumerate(dados):
+                # Obtém o cliente da linha (assumindo que é a primeira coluna)
+                cliente = row_data[1]
+                cor_cliente = self.gerar_cor(cliente)
 
-                # Aplica a cor ao status
-                if col_num == 15:  # Coluna 'Status'
-                    self.aplicar_cor_status(item)
+                for col_num, data in enumerate(row_data):
+                    item = QtWidgets.QTableWidgetItem(str(data))
+                    item.setTextAlignment(QtCore.Qt.AlignCenter)
+                    item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)  # Desabilita edição
+                    self.table.setItem(row_position, col_num, item)
+
+                    # Aplica a cor ao cliente
+                    if col_num == 1:  # Coluna 'Cliente'
+                        item.setBackground(cor_cliente)
+                        item.setForeground(QtGui.QColor("white"))
+
+                    # Aplica a cor ao status
+                    if col_num == 16:  # Coluna 'Status'
+                        self.aplicar_cor_status(item)
+
+            self.table.setUpdatesEnabled(True)  # Reabilita atualizações da tabela
+            # Ajusta o tamanho das colunas
+            # self.table.resizeColumnsToContents()  
+
+        except Exception as e:
+            QMessageBox.critical(self, "Erro", f"Erro ao carregar os dados: {e}")
 
     def aplicar_cor_status(self, item):
         """Define as cores das células com base no valor de status."""
@@ -308,7 +515,6 @@ class TelaOrdem(QtWidgets.QMainWindow):
         elif item.text() == "CONCLUIDO":
             item.setBackground(QtGui.QColor("#2ecc71"))  # Verde
             item.setForeground(QtGui.QColor("white"))
-
 
     def colorir_status(self, item):
         """Aplica as cores às células com base no valor de status."""
@@ -323,13 +529,15 @@ class TelaOrdem(QtWidgets.QMainWindow):
             if todas_linhas > 0:
                 # Pega o índice da última linha
                 ultimo_id = todas_linhas - 1
-                # Seleciona e foca no último registro
-                self.table.setCurrentCell(ultimo_id, 0)
-                self.table.scrollToItem(self.table.item(ultimo_id, 0))
+                # Seleciona e foca no último registro na segunda coluna (índice 1)
+                self.table.setCurrentCell(ultimo_id, 1)
+                self.table.scrollToItem(self.table.item(ultimo_id, 1))
             else:
-                QMessageBox.information(self, "Informação", "Não há registros no QTableWidget.")
+                QMessageBox.information(
+                    self, "Informação", "Não há registros no QTableWidget.")
         except Exception as e:
-            QMessageBox.critical(self, "Erro", f"Erro ao navegar para o último registro: {e}")
+            QMessageBox.critical(
+                self, "Erro", f"Erro ao navegar para o último registro: {e}")
 
     def exportar_dados(self):
         dados = []
@@ -354,9 +562,11 @@ class TelaOrdem(QtWidgets.QMainWindow):
                     df.to_excel(file, index=False)
                 else:
                     df.to_csv(file, index=False, sep=";")
-                QMessageBox.information(self, "Sucesso", f"Dados exportados com sucesso:\n{file}")
+                QMessageBox.information(
+                    self, "Sucesso", f"Dados exportados com sucesso:\n{file}")
             except Exception as e:
-                QMessageBox.critical(self, "Erro", f"Erro ao exportar os dados: {e}")
+                QMessageBox.critical(
+                    self, "Erro", f"Erro ao exportar os dados: {e}")
 
     def salvar_dados(self):
         """Salva os dados do formulário no banco de dados."""
@@ -366,18 +576,31 @@ class TelaOrdem(QtWidgets.QMainWindow):
             # Itera sobre as linhas do formulário dinâmico
             for frame_linha, inputs_linha in self.input_rows:
                 registro = []
-                for widget in inputs_linha:
+                valores_obrigatorios = {"Modelo": "", "Serial Number": "", "Preparador": ""}
+
+                for widget, coluna in zip(inputs_linha, self.placeholders):
                     if isinstance(widget, QtWidgets.QLineEdit):
-                        registro.append(widget.text().strip())
+                        valor = widget.text().strip()
                     elif isinstance(widget, QtWidgets.QComboBox):
-                        registro.append(widget.currentText().strip())
-                
-                # especificar os campos obrigatórios e mostrar um aviso Cliente, Modelo, SerialNumber Preparador
-                if not registro[0] or not registro[1] or not registro[3] or not registro[12]:
-                    # mostrar os camppos obrigatórios
-                    campos_obrigatorios = ["Cliente", "Modelo", "SerialNumber", "Preparador"]
-                    QMessageBox.warning(self, "Aviso", f"Por favor, preencha os campos obrigatórios: {', '.join(campos_obrigatorios)}!")
-                    return
+                        valor = widget.currentText().strip()
+                    else:
+                        valor = ""
+
+                    # Verificar campos obrigatórios
+                    if coluna in valores_obrigatorios:
+                        valores_obrigatorios[coluna] = valor
+
+                    registro.append(valor)
+
+                # Verificar se algum campo obrigatório está vazio
+                campos_vazios = [col for col, val in valores_obrigatorios.items() if not val]
+                if campos_vazios:
+                    QMessageBox.warning(
+                        self,
+                        "Campos Obrigatórios Vazios",
+                        f"Os seguintes campos obrigatórios estão vazios: {', '.join(campos_vazios)}",
+                    )
+                    return  # Interrompe o processo de salvamento
 
                 # Adiciona a data atual como DataEnvio
                 registro.append(datetime.now().strftime("%d/%m/%Y"))
@@ -386,13 +609,13 @@ class TelaOrdem(QtWidgets.QMainWindow):
             # Insere os registros no banco de dados
             for registro in registros_para_salvar:
                 self.cursor.execute("""
-                    INSERT INTO ordem (
+                    INSERT INTO appordem (
                         Cliente, Modelo, PartNumber, SerialNumber, VersaoSO,
                         VersaoBoot, ModoDebugRelease, PUK, VersaoRadio, VersaoApp,
                         Configurador, PerfilChave, Preparador, Obs, OrdemService, Status, DataEnvio
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, registro)
-            
+
             self.conn.commit()
             QMessageBox.information(self, "Sucesso", "Dados salvos com sucesso!")
 
@@ -410,10 +633,109 @@ class TelaOrdem(QtWidgets.QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Erro", f"Erro ao salvar os dados: {e}")
 
+
+    def configurar_campos_fixos(self):
+        """Configura os campos fixos para entrada de dados."""
+        colunas_permitidas = ["Cliente", "Ordem Service", "Status", "Data Envio"]
+
+        self.frame_campos = QtWidgets.QFrame(self.frame_inputs)
+        self.frame_campos.setLayout(QtWidgets.QHBoxLayout())
+        self.frame_inputs.layout().addWidget(self.frame_campos)
+
+        self.inputs_campos = []
+
+        for coluna in colunas_permitidas:
+            frame_campo = QtWidgets.QFrame(self.frame_campos)
+            frame_campo.setLayout(QtWidgets.QVBoxLayout())
+            self.frame_campos.layout().addWidget(frame_campo)
+
+            label = QtWidgets.QLabel(coluna)
+            frame_campo.layout().addWidget(label)
+
+            if coluna == "Status":
+                combobox = QtWidgets.QComboBox()
+                combobox.addItems(["PENDENTE"])  # Apenas "PENDENTE"
+                combobox.setEnabled(False)  # Desabilitar interação do usuário
+                frame_campo.layout().addWidget(combobox)
+                self.inputs_campos.append(combobox)
+            elif coluna == "Data Envio":
+                entry = QtWidgets.QLineEdit(datetime.now().strftime("%d/%m/%Y"))
+                entry.setEnabled(False)  # Bloqueia edição manual
+                frame_campo.layout().addWidget(entry)
+                self.inputs_campos.append(entry)
+            else:
+                entry = QtWidgets.QLineEdit()
+                frame_campo.layout().addWidget(entry)
+                entry.textChanged.connect(self.convert_to_uppercase)
+                self.inputs_campos.append(entry)
+
+        # Campo para quantidade de registros
+        frame_quantidade = QtWidgets.QFrame(self.frame_inputs)
+        frame_quantidade.setLayout(QtWidgets.QVBoxLayout())
+        self.frame_inputs.layout().addWidget(frame_quantidade)
+
+        label_quantidade = QtWidgets.QLabel("Quantidade (1-20)")
+        frame_quantidade.layout().addWidget(label_quantidade)
+
+        self.quantidade_input = QtWidgets.QSpinBox()
+        self.quantidade_input.setRange(1, 20)
+        self.quantidade_input.setValue(1)  # Valor padrão
+        frame_quantidade.layout().addWidget(self.quantidade_input)
+
+    def salvar_registro_multiplas_vezes(self):
+        """Salva o registro fixo no banco de dados a quantidade de vezes especificada."""
+        try:
+            quantidade = self.quantidade_input.value()  # Quantidade de vezes a persistir
+            registro = {}
+
+            # Obter os valores dos campos fixos
+            for coluna, widget in zip(["Cliente", "Ordem Service", "Status", "Data Envio"], self.inputs_campos):
+                if isinstance(widget, QtWidgets.QLineEdit):
+                    valor = widget.text().strip()
+                elif isinstance(widget, QtWidgets.QComboBox):
+                    valor = widget.currentText().strip()
+                else:
+                    valor = ""
+
+                # Verificar se "Cliente" e "Ordem Service" estão preenchidos
+                if coluna in ["Cliente", "Ordem Service"] and not valor:
+                    QtWidgets.QMessageBox.warning(
+                        self,
+                        "Campo Obrigatório",
+                        f"O campo {coluna} é obrigatório."
+                    )
+                    return
+
+                registro[coluna] = valor
+
+            # Persistir os registros no banco de dados
+            for _ in range(quantidade):
+                self.cursor.execute("""
+                    INSERT INTO appordem (Cliente, OrdemService, Status, DataEnvio)
+                    VALUES (?, ?, ?, ?)
+                """, (registro["Cliente"], registro["Ordem Service"], registro["Status"], registro["Data Envio"]))
+
+            self.conn.commit()
+            QtWidgets.QMessageBox.information(self, "Sucesso", "Registros salvos com sucesso!")
+
+            # Atualizar tabela após salvar
+            self.carregar_dados()
+
+            # Limpar os campos de entrada
+            for widget in self.inputs_campos:
+                if isinstance(widget, QtWidgets.QLineEdit):
+                    widget.clear()
+                elif isinstance(widget, QtWidgets.QComboBox):
+                    widget.setCurrentIndex(0)
+
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Erro", f"Erro ao salvar os dados: {e}")
+
     def adicionar_linha(self):
         """Adiciona uma linha de campos de entrada com rótulos acima."""
         if len(self.input_rows) >= 8:
-            QtWidgets.QMessageBox.warning(self, "Limite atingido", "O número máximo de 8 linhas foi atingido.")
+            QtWidgets.QMessageBox.warning(
+                self, "Limite atingido", "O número máximo de 8 linhas foi atingido.")
             return
 
         frame_linha = QtWidgets.QFrame(self.frame_inputs)
@@ -436,15 +758,16 @@ class TelaOrdem(QtWidgets.QMainWindow):
                 combobox.setCurrentIndex(0)
                 frame_campo.layout().addWidget(combobox)
                 input_widget = combobox
-			# implementar combo box para Status
+                # implementar combo box para Status
             elif placeholder == "Status":
                 combobox = QtWidgets.QComboBox()
                 combobox.addItems(["PENDENTE", "CONCLUIDO"])
                 combobox.setCurrentIndex(0)
                 frame_campo.layout().addWidget(combobox)
-                input_widget = combobox	
+                input_widget = combobox
             else:
                 entry = QtWidgets.QLineEdit()
+                entry.textChanged.connect(self.convert_to_uppercase)
                 frame_campo.layout().addWidget(entry)
                 input_widget = entry
 
@@ -454,11 +777,19 @@ class TelaOrdem(QtWidgets.QMainWindow):
                     if isinstance(input_widget, QtWidgets.QLineEdit):
                         input_widget.setText(ultima_linha_inputs[index].text())
                     elif isinstance(input_widget, QtWidgets.QComboBox):
-                        input_widget.setCurrentText(ultima_linha_inputs[index].currentText())
+                        input_widget.setCurrentText(
+                            ultima_linha_inputs[index].currentText())
 
             inputs_linha.append(input_widget)
 
         self.input_rows.append((frame_linha, inputs_linha))
+    def convert_to_uppercase(self, text):
+        """Converte o texto para letras maiúsculas."""
+        sender = self.sender()
+        if isinstance(sender, QtWidgets.QLineEdit):
+            cursor_position = sender.cursorPosition()
+            sender.setText(text.upper())
+            sender.setCursorPosition(cursor_position)
 
     def remover_linha(self):
         """Remove a última linha de campos de entrada."""
@@ -466,48 +797,80 @@ class TelaOrdem(QtWidgets.QMainWindow):
             frame_linha, _ = self.input_rows.pop()
             frame_linha.deleteLater()
         else:
-            QtWidgets.QMessageBox.warning(self, "Aviso", "Não há mais linhas para remover.")
+            QtWidgets.QMessageBox.warning(
+                self, "Aviso", "Não há mais linhas para remover.")
+    def editar_linha(self):
+        selected_rows = self.table.selectionModel().selectedRows()
+        if not selected_rows:
+            QMessageBox.warning(self, "Aviso", "Selecione uma ou mais linhas para editar.")
+            return
 
-    
-    def atualizar_status(self):
-        """Atualiza o status da linha selecionada para CONCLUÍDO e salva no banco de dados."""
+        # Colunas editáveis no modal
+        colunas_editaveis = [
+            "Modelo", "Part Number", "Serial Number", "Versao SO", "Versao Boot",
+            "DebugOuRelease", "PUK", "Versao Radio", "Versao App", "Configurador",
+            "Perfil Chaves", "Preparador", "Obs", "Status"
+        ]
+
+        # Identificar os índices correspondentes em self.colunas
+        indices_editaveis = [self.colunas.index(col) for col in colunas_editaveis]
+
+        # Coletar dados das linhas selecionadas
+        linhas_dados = []
+        for row in selected_rows:
+            data = [
+                self.table.item(row.row(), col).text() if self.table.item(row.row(), col) else ""
+                for col in indices_editaveis
+            ]
+            linhas_dados.append(data)
+
+        # Abrir o modal para editar dados
+        modal = EditarModal(self)
+        modal.set_data_multiplas_linhas(linhas_dados)
+
+        if modal.exec_() == QDialog.Accepted:
+            updated_linhas_dados = modal.get_data_multiplas_linhas()
+
+            # Convertendo todos os dados para maiúsculas antes de salvar
+            updated_linhas_dados = [
+                [value.upper() if isinstance(value, str) else value for value in linha]
+                for linha in updated_linhas_dados
+            ]
+
+            # Atualizar os dados na tabela visual e no banco de dados
+            for row, updated_data in zip(selected_rows, updated_linhas_dados):
+                self.atualizar_registro(row.row(), updated_data, indices_editaveis)
+
+    def atualizar_registro(self, row, updated_data, indices_editaveis):
         try:
-            # Obtém a linha selecionada na tabela
-            selected_row = self.table.currentRow()
-            if selected_row == -1:
-                QMessageBox.warning(self, "Aviso", "Selecione uma linha para atualizar o status.")
-                return
-            
-            # Obter os dados necessários para identificar o registro
-            serial_number_item = self.table.item(selected_row, 3)  # Coluna 'Serial Number'
-            status_item = self.table.item(selected_row, 15)  # Coluna 'Status'
-
-            if not serial_number_item or not status_item:
-                QMessageBox.warning(self, "Aviso", "Não foi possível identificar o registro.")
-                return
-
-            serial_number = serial_number_item.text()
-            current_status = status_item.text()
-
-            # Verificar se o status já está "CONCLUÍDO"
-            if current_status == "CONCLUIDO":
-                QMessageBox.information(self, "Informação", "O status já está definido como CONCLUIDO.")
-                return
-
-            # Atualizar a célula da tabela
-            self.table.setItem(selected_row, 15, QtWidgets.QTableWidgetItem("CONCLUIDO"))
-
-            # Atualizar o status no banco de dados
+            # Obter o ID do registro para atualizar no banco
+            record_id = self.table.item(row, 0).text()  # Supondo que a coluna 'id' é a primeira
+            # Obter a data e hora atual
+            data_envio_atual = datetime.now().strftime('%d/%m/%Y')
+            # Atualiza o banco de dados
             self.cursor.execute("""
-                UPDATE ordem
-                SET Status = ?
-                WHERE SerialNumber = ?
-            """, ("CONCLUIDO", serial_number))
+                UPDATE appordem SET
+                    Modelo=?, PartNumber=?, SerialNumber=?, VersaoSO=?, VersaoBoot=?, 
+                    ModoDebugRelease=?, PUK=?, VersaoRadio=?, VersaoApp=?, Configurador=?, PerfilChave=?, 
+                    Preparador=?, Obs=?, Status=?, DataEnvio=?
+                WHERE id=?
+            """, (*updated_data, data_envio_atual, record_id))
+
+            # Confirma a transação
             self.conn.commit()
 
-            QMessageBox.information(self, "Sucesso", "Status atualizado com sucesso!")
+            # Atualizar a tabela visual
+            for col, value in zip(indices_editaveis, updated_data):
+                self.table.setItem(row, col, QtWidgets.QTableWidgetItem(value))
+            # Atualizar a coluna Data Envio na tabela visual (supondo que ela exista)
+            col_data_envio = self.colunas.index("Data Envio")  # Certifique-se de que a coluna exista
+            self.table.setItem(row, col_data_envio, QtWidgets.QTableWidgetItem(data_envio_atual))
+            QMessageBox.information(self, "Sucesso", f"Cliente de ID {record_id} atualizado com sucesso!")
+
         except Exception as e:
-            QMessageBox.critical(self, "Erro", f"Erro ao atualizar o status: {e}")
+            QMessageBox.critical(self, "Erro", f"Erro ao atualizar os dados: {e}")
+            self.conn.rollback()  # Descomente se estiver usando transações
+    
 
     def atualizar_table(self, dados):
         """Atualiza os dados da tabela com os resultados fornecidos."""
@@ -523,9 +886,10 @@ class TelaOrdem(QtWidgets.QMainWindow):
             self.conn.close()
             self.close()
 
+
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
-    main = TelaOrdem("username", "total")  # Passe os parâmetros desejados
+    main = TelaOrdem("username", "suporte")  # Passe os parâmetros desejados
     main.show()
     sys.exit(app.exec_())

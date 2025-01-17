@@ -54,7 +54,7 @@ class LoginApp(QMainWindow):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nome TEXT UNIQUE NOT NULL,
                 senha TEXT NOT NULL,
-                permissao TEXT NOT NULL CHECK(permissao IN ('total', 'limitado'))
+                permissao TEXT NOT NULL CHECK(permissao IN ('suporte', 'operacaopax'))
             )
         ''')
         self.conn.commit()
@@ -132,7 +132,7 @@ class LoginApp(QMainWindow):
 
         permissao_label = QLabel("Permissão:", styleSheet="font-weight: bold; font-size: 20px;")
         permissao_combobox = QComboBox(self, styleSheet="font-size: 16px;")
-        permissao_combobox.addItems(["total", "limitado"])
+        permissao_combobox.addItems(["suporte", "operacaopax"])
         admin_layout.addWidget(permissao_label)
         admin_layout.addWidget(permissao_combobox)
 
