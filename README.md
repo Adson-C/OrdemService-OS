@@ -5,6 +5,8 @@
 ## Descrição
 Este projeto é uma aplicação desenvolvida em Python utilizando PyQt5 para automatizar planilhas Excel. Ele visa facilitar a gestão de ordens de serviço através de uma interface gráfica intuitiva e amigável.
 
+![Image](https://github.com/user-attachments/assets/0b4ff6a2-8d78-4454-96a3-876c24c2c002)
+
 ## Funcionalidades
 - Criação e edição de ordens de serviço
 - Geração automática de planilhas Excel
