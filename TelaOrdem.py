@@ -1,6 +1,7 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtWidgets import QMessageBox, QFileDialog, QDialog, QMenuBar
+from PyQt5.QtWidgets import QMessageBox, QFileDialog, QDialog, QMenuBar, QToolBar, QAction
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
 import sqlite3
 import sys
 import pandas as pd
@@ -67,95 +68,7 @@ class FiltroAvancadoDialog(QDialog):
         operador = self.operador_combobox.currentText()
         valor = self.valor_input.text().strip()
         return coluna, operador, valor
-
-# class EditarModal(QtWidgets.QDialog):
-#     def __init__(self, parent=None):
-#         super().__init__(parent)
-#         self.parent = parent
-#         self.setWindowTitle("Editar Registros")
-#         self.layout = QtWidgets.QVBoxLayout(self)
-
-#         self.inputs_por_linha = []
-
-#         # Lista das colunas editáveis
-#         self.colunas_editaveis = [
-#             "Modelo", "Part Number", "Serial Number", "Versao SO", "Versao Boot", 
-#             "DebugOuRelease", "PUK", "Versao Radio", "Versao App", "Configurador", 
-#             "Perfil Chaves", "Preparador", "Obs", "Status"
-#         ]
-
-#     def set_data_multiplas_linhas(self, dados_linhas):
-#         """Configura os placeholders com os dados de múltiplas linhas."""
-#         for dados in dados_linhas:
-#             inputs = []
-#             linha_layout = QtWidgets.QHBoxLayout()
-
-#             for col, valor in zip(self.colunas_editaveis, dados):
-#                 if col == "DebugOuRelease":
-#                     combobox = QtWidgets.QComboBox()
-#                     combobox.addItems(["DEBUG", "RELEASE"])
-#                     combobox.setCurrentText(valor)
-#                     linha_layout.addWidget(combobox)
-#                     inputs.append(combobox)
-#                 elif col == "Status":
-#                     combobox = QtWidgets.QComboBox()
-#                     combobox.addItems(["PENDENTE", "CONCLUIDO"])
-#                     combobox.setCurrentText(valor)
-#                     linha_layout.addWidget(combobox)
-#                     inputs.append(combobox)
-#                 else:
-#                     # Criar campo de entrada e configurar placeholders
-#                     input_field = QtWidgets.QLineEdit(valor if valor else "")
-#                     if not valor or valor.strip().lower() in {"null", "none"}:
-#                         input_field.clear()  # Limpa valores inválidos
-#                         input_field.setPlaceholderText(f"{col.lower()}")  # Adiciona placeholder
-
-#                     linha_layout.addWidget(input_field)
-#                     inputs.append(input_field)
-
-#             self.layout.addLayout(linha_layout)
-#             self.inputs_por_linha.append(inputs)
-
-#         # Botão para limpar valores
-#         self.clear_button = QtWidgets.QPushButton("Limpar Campos Vazios")
-#         self.clear_button.clicked.connect(self.limpar_campos)
-#         self.clear_button.setFixedSize(200, 30)
-#         self.clear_button.setStyleSheet(
-#             "background-color: #DC143C; color: white; font-weight: bold;"
-#         )
-#         self.clear_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
-#         self.layout.addWidget(self.clear_button)
-#         self.clear_button.hide()
-
-#         # Botão Salvar
-#         self.save_button = QtWidgets.QPushButton("Salvar")
-#         self.save_button.clicked.connect(self.accept)
-#         self.save_button.setFixedSize(200, 30)
-#         self.save_button.setStyleSheet(
-#             "background-color: #228B22; color: white; font-weight: bold;"
-#         )
-#         self.save_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
-#         self.layout.addWidget(self.save_button)
-
-#     def limpar_campos(self):
-#         """Limpa campos com valores None, NULL ou vazios e configura placeholders."""
-#         for inputs in self.inputs_por_linha:
-#             for input_field in inputs:
-#                 if isinstance(input_field, QtWidgets.QLineEdit):
-#                     if not input_field.text() or input_field.text().strip().lower() in {"null", "none"}:
-#                         input_field.clear()
-#                         input_field.setPlaceholderText(f"{input_field.placeholderText()}")  # Mantém o placeholder
-
-#     def get_data_multiplas_linhas(self):
-#         """Retorna os dados editados de todas as linhas."""
-#         return [
-#             [
-#                 input_field.currentText().strip() if isinstance(input_field, QtWidgets.QComboBox)
-#                 else input_field.text().strip()
-#                 for input_field in inputs
-#             ]
-#             for inputs in self.inputs_por_linha
-#         ]
+    
 class EditarModal(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -193,6 +106,76 @@ class EditarModal(QtWidgets.QDialog):
 
         return {col: sorted(list(valores)) for col, valores in sugestoes.items()}
 
+    # def set_data_multiplas_linhas(self, dados_linhas):
+    #     """Configura os placeholders com os dados de múltiplas linhas."""
+    #     for dados in dados_linhas:
+    #         inputs = []
+    #         linha_layout = QtWidgets.QHBoxLayout()
+
+    #         for col, valor in zip(self.colunas_editaveis, dados):
+    #             valor_tooltip = valor if valor and valor.strip().lower() not in {"null", "none"} else "Valor não definido"
+
+    #             if col == "DebugOuRelease":
+    #                 # Configuração do combobox para Debug/Release
+    #                 combobox = QtWidgets.QComboBox()
+    #                 combobox.addItems(["DEBUG", "RELEASE"])
+    #                 combobox.setCurrentText(valor)
+    #                 combobox.setToolTip(valor_tooltip)  # Tooltip com valor completo
+    #                 combobox.setFixedWidth(60)  # Define largura fixa
+    #                 linha_layout.addWidget(combobox)
+    #                 inputs.append(combobox)
+                
+    #             elif col == "Status":
+    #                 # Configuração do combobox para Status
+    #                 combobox = QtWidgets.QComboBox()
+    #                 combobox.addItems(["PENDENTE", "CONCLUIDO"])
+    #                 combobox.setCurrentText(valor)
+    #                 combobox.setToolTip(valor_tooltip)  # Tooltip com valor completo
+    #                 combobox.setFixedWidth(80)  # Define largura fixa
+    #                 linha_layout.addWidget(combobox)
+    #                 inputs.append(combobox)
+                
+    #             else:
+    #                 # Configuração do QLineEdit para campos editáveis
+    #                 input_field = QtWidgets.QLineEdit(valor if valor else "")
+                    
+    #                 if not valor or valor.strip().lower() in {"null", "none"}:
+    #                     input_field.clear()  # Limpa valores inválidos
+    #                     input_field.setPlaceholderText(f"{col.lower()}")  # Placeholder com o nome da coluna
+                    
+    #                 # Configuração do autocomplete
+    #                 if col in self.sugestoes:
+    #                     completer = QtWidgets.QCompleter(self.sugestoes[col])
+    #                     completer.setCaseSensitivity(Qt.CaseInsensitive)
+                        
+    #                     # Ajustar o tamanho do menu de autocomplete
+    #                     popup = completer.popup()
+    #                     popup.setStyleSheet("font-size: 12px;")  # Fonte maior no popup
+    #                     popup.setMinimumWidth(400)  # Largura mínima do autocomplete
+
+    #                     input_field.setCompleter(completer)
+
+    #                 # Tooltip com valor completo
+    #                 input_field.setToolTip(valor_tooltip)
+
+    #                 # Define a largura fixa do campo de entrada
+    #                 input_field.setFixedWidth(90)  # Ajuste para campos maiores
+    #                 linha_layout.addWidget(input_field)
+    #                 inputs.append(input_field)
+
+    #         self.layout.addLayout(linha_layout)
+    #         self.inputs_por_linha.append(inputs)
+
+    #     # Botão Salvar
+    #     self.save_button = QtWidgets.QPushButton("Salvar")
+    #     self.save_button.clicked.connect(self.accept)
+    #     self.save_button.setFixedSize(200, 30)
+    #     self.save_button.setStyleSheet(
+    #         "background-color: #228B22; color: white; font-weight: bold;"
+    #     )
+    #     self.save_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
+    #     self.layout.addWidget(self.save_button)
+
     def set_data_multiplas_linhas(self, dados_linhas):
         """Configura os placeholders com os dados de múltiplas linhas."""
         for dados in dados_linhas:
@@ -200,31 +183,46 @@ class EditarModal(QtWidgets.QDialog):
             linha_layout = QtWidgets.QHBoxLayout()
 
             for col, valor in zip(self.colunas_editaveis, dados):
+                
                 if col == "DebugOuRelease":
+                    # Configuração do combobox para Debug/Release
                     combobox = QtWidgets.QComboBox()
                     combobox.addItems(["DEBUG", "RELEASE"])
-                    combobox.setCurrentText(valor)
+                    combobox.setFixedWidth(60)  # Define largura fixa
                     linha_layout.addWidget(combobox)
                     inputs.append(combobox)
+                
                 elif col == "Status":
+                    # Configuração do combobox para Status
                     combobox = QtWidgets.QComboBox()
                     combobox.addItems(["PENDENTE", "CONCLUIDO"])
-                    combobox.setCurrentText(valor)
+                    combobox.setFixedWidth(80)  # Define largura fixa
                     linha_layout.addWidget(combobox)
                     inputs.append(combobox)
+                
                 else:
-                    # Criar campo de entrada e configurar placeholders
+                    # Configuração do QLineEdit para campos editáveis
                     input_field = QtWidgets.QLineEdit(valor if valor else "")
+                    
                     if not valor or valor.strip().lower() in {"null", "none"}:
                         input_field.clear()  # Limpa valores inválidos
-                        input_field.setPlaceholderText(f"{col.lower()}")  # Adiciona placeholder
-
-                    # Adicionar autocomplete
+                        input_field.setPlaceholderText(f"{col.lower()}")  # Placeholder com o nome da coluna
+                    
+                    # Configuração do autocomplete
                     if col in self.sugestoes:
                         completer = QtWidgets.QCompleter(self.sugestoes[col])
                         completer.setCaseSensitivity(Qt.CaseInsensitive)
+                        
+                        # Ajustar o tamanho do menu de autocomplete
+                        popup = completer.popup()
+                        popup.setStyleSheet("font-size: 12px;")  # Fonte maior no popup
+                        popup.setMinimumWidth(400)  # Largura mínima do autocomplete
+
                         input_field.setCompleter(completer)
 
+                    # Tooltip com valor completo ou mensagem padrão
+                    # Define a largura fixa do campo de entrada
+                    input_field.setFixedWidth(90)  # Ajuste para campos maiores
                     linha_layout.addWidget(input_field)
                     inputs.append(input_field)
 
@@ -332,16 +330,16 @@ class TelaOrdem(QtWidgets.QMainWindow):
         self.conn.commit()
     
     def setup_ui(self):
-        # Criação do layout principal
-        print("Inicializando a interface...")
+        # Criação do widget central e layout principal
         central_widget = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(central_widget)
+        self.layout_principal = QtWidgets.QVBoxLayout(central_widget)
+        self.layout_principal.setContentsMargins(10, 10, 10, 10)
 
         # Label do usuário
         # user_label = QtWidgets.QLabel(f"Usuário logado: {self.username}")
         user_label = QtWidgets.QLabel(f"Usuário logado: {self.username} ({self.permissao.upper()})")
         user_label.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
-        layout.addWidget(user_label)
+        self.layout_principal.addWidget(user_label)
 
         # Layout para o botão "Exportar Dados" acima da tabela
         if self.permissao == "suporte":
@@ -353,38 +351,39 @@ class TelaOrdem(QtWidgets.QMainWindow):
             export_layout.addWidget(export_button)
             export_layout.addStretch()
             # Adiciona o layout com o botão acima da tabela
-            layout.addLayout(export_layout)
+            self.layout_principal.addLayout(export_layout)
 
         # Layout para os botões de filtro acima da tabela e alinhados à direita
         filter_layout = QtWidgets.QHBoxLayout()
         # Adiciona espaço flexível para empurrar os botões para a direita
         filter_layout.addStretch()
         
-        ultimo_registro_button = QtWidgets.QPushButton("Ir para Ultimo Registro")
+       # Botão "Ir para Último Registro"
+        ultimo_registro_button = QtWidgets.QPushButton("Ir para Último Registro")
+        ultimo_registro_button.setIcon(QtGui.QIcon("icons/down-arrow.png"))  # Substitua pelo caminho do seu ícone
+        ultimo_registro_button.setIconSize(QtCore.QSize(28, 30))  # Define o tamanho do ícone
         ultimo_registro_button.clicked.connect(self.ir_para_ultimo_registro)
-        ultimo_registro_button.setStyleSheet("background-color: #00008B; color: white; font-weight: bold;")
-        ultimo_registro_button.setFont(QtGui.QFont("Helvetica", 11, QtGui.QFont.Bold))
+        ultimo_registro_button.setFont(QtGui.QFont("sans-serif", 10))
         filter_layout.addWidget(ultimo_registro_button)
 
-        filter_advanced_button = QtWidgets.QPushButton("Filtro Avançado")
+        # Botão "Filtro Avançado"
+        filter_advanced_button = QtWidgets.QPushButton("Filtro")
+        filter_advanced_button.setIcon(QtGui.QIcon("icons/filter.png"))  # Substitua pelo caminho do seu ícone
+        filter_advanced_button.setIconSize(QtCore.QSize(28, 30))  # Define o tamanho do ícone
         filter_advanced_button.clicked.connect(self.abrir_filtro_avancado)
-        filter_advanced_button.setStyleSheet(
-            "background-color: #f39c12; color: white; font-weight: bold;")
-        filter_advanced_button.setFont(
-            QtGui.QFont("Helvetica", 11, QtGui.QFont.Bold))
+        filter_advanced_button.setFont(QtGui.QFont("sans-serif", 10))
         filter_layout.addWidget(filter_advanced_button)
 
+        # Botão "Limpar Filtro"
         clear_advanced_filter_button = QtWidgets.QPushButton("Limpar Filtro")
-        clear_advanced_filter_button.clicked.connect(
-            self.limpar_filtro_avancado)
-        clear_advanced_filter_button.setStyleSheet(
-            "background-color: #6495ED; color: white; font-weight: bold;")
-        clear_advanced_filter_button.setFont(
-            QtGui.QFont("Helvetica", 11, QtGui.QFont.Bold))
+        clear_advanced_filter_button.setIcon(QtGui.QIcon("icons/clear-filter.png"))  # Substitua pelo caminho do seu ícone
+        clear_advanced_filter_button.setIconSize(QtCore.QSize(28, 30))  # Define o tamanho do íconefilter_advanced_button
+        clear_advanced_filter_button.clicked.connect(self.limpar_filtro_avancado)
+        clear_advanced_filter_button.setFont(QtGui.QFont("sans-serif", 10))
         filter_layout.addWidget(clear_advanced_filter_button)
 
         # Adiciona o layout com os botões de filtro acima da tabela
-        layout.addLayout(filter_layout)
+        self.layout_principal.addLayout(filter_layout)
 
         # Criação do QTableWidget
         self.table = QtWidgets.QTableWidget()
@@ -398,13 +397,13 @@ class TelaOrdem(QtWidgets.QMainWindow):
         self.table.setSelectionMode(QtWidgets.QTableView.MultiSelection)
         # Adiciona o evento para colorir dinamicamente
         self.table.itemChanged.connect(self.colorir_status)
-        layout.addWidget(self.table)
+        self.layout_principal.addWidget(self.table)
         self.table.hideColumn(0)
 
         # Frame para os campos de entrada
         self.frame_inputs = QtWidgets.QFrame(self)
         self.frame_inputs.setLayout(QtWidgets.QVBoxLayout())
-        layout.addWidget(self.frame_inputs)
+        self.layout_principal.addWidget(self.frame_inputs)
 
          # Adicionar uma linha inicial automaticamente
         if self.permissao == "operacaopax":
@@ -412,114 +411,10 @@ class TelaOrdem(QtWidgets.QMainWindow):
         else:
             self.adicionar_linha()
 
+        # Configuração do painel inferior com menu fixo
+        self.configurar_painel_inferior_com_menu()
 
-        # Layout para os botões de ações gerais
-        actions_layout = QtWidgets.QHBoxLayout()
-        # Define o espaçamento entre os botões como 10px
-        actions_layout.setSpacing(35)
-        actions_layout.setContentsMargins(
-            0, 0, 0, 0)  # Remove margens adicionais 
-
-        # if self.permissao == "suporte":
-        #     save_button = QtWidgets.QPushButton("Salvar Dados")
-        #     save_button.clicked.connect(self.salvar_dados)
-        #     save_button.setStyleSheet(
-        #         "background-color: #228B22; color: white; font-weight: bold;")
-        #     save_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
-        #     actions_layout.addWidget(save_button)
-            
-        #     edit_button = QtWidgets.QPushButton("Editar Linha")
-        #     edit_button.clicked.connect(self.editar_linha)
-        #     edit_button.setStyleSheet("background-color: #FF8C00; color: white; font-weight: bold;")
-        #     edit_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
-        #     actions_layout.addWidget(edit_button)
-
-        #     add_row_button = QtWidgets.QPushButton(
-        #         "Adicionar +campos Registro")
-        #     add_row_button.clicked.connect(self.adicionar_linha)
-        #     add_row_button.setStyleSheet(
-        #         "background-color: #2F4F4F; color: white; font-weight: bold;")
-        #     add_row_button.setFont(QtGui.QFont(
-        #         "Helvetica", 10, QtGui.QFont.Bold))
-        #     actions_layout.addWidget(add_row_button)
-
-        #     remove_row_button = QtWidgets.QPushButton("Remover Linha")
-        #     remove_row_button.clicked.connect(self.remover_linha)
-        #     remove_row_button.setStyleSheet(
-        #         "background-color: #DC143C; color: white; font-weight: bold;")
-        #     remove_row_button.setFont(QtGui.QFont(
-        #         "Helvetica", 10, QtGui.QFont.Bold))
-        #     actions_layout.addWidget(remove_row_button)
-
-        #     sair_button = QtWidgets.QPushButton("Sair")
-        #     sair_button.clicked.connect(self.validar_saida)
-        #     sair_button.setStyleSheet(
-        #         "background-color: #A52A2A; color: white; font-weight: bold;")
-        #     sair_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
-        #     actions_layout.addWidget(sair_button)
-
-        # # usuario operacaopax
-        # if self.permissao == "operacaopax":
-        #     save_button = QtWidgets.QPushButton("Salvar Dados")
-        #     save_button.clicked.connect(self.salvar_registro_multiplas_vezes)
-        #     save_button.setStyleSheet(
-        #         "background-color: #228B22; color: white; font-weight: bold;")
-        #     save_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
-        #     actions_layout.addWidget(save_button)
-
-
-        #     sair_button = QtWidgets.QPushButton("Sair")
-        #     sair_button.clicked.connect(self.validar_saida)
-        #     sair_button.setStyleSheet(
-        #         "background-color: #A52A2A; color: white; font-weight: bold;")
-        #     sair_button.setFont(QtGui.QFont("Helvetica", 12, QtGui.QFont.Bold))
-        #     actions_layout.addWidget(sair_button)
-        # Adicionar a barra de menu
-        menu_bar = self.menuBar()
-
-        # Menu para "Operações Suporte"
-        if self.permissao == "suporte":
-            suporte_menu = menu_bar.addMenu("Operações Suporte")
-
-            # Adicionar ações ao menu de suporte
-            salvar_action = QtWidgets.QAction("Salvar Dados", self)
-            salvar_action.triggered.connect(self.salvar_dados)
-            suporte_menu.addAction(salvar_action)
-
-            editar_action = QtWidgets.QAction("Editar Linha", self)
-            editar_action.triggered.connect(self.editar_linha)
-            suporte_menu.addAction(editar_action)
-
-            adicionar_action = QtWidgets.QAction("Adicionar +campos Registro", self)
-            adicionar_action.triggered.connect(self.adicionar_linha)
-            suporte_menu.addAction(adicionar_action)
-
-            remover_action = QtWidgets.QAction("Remover Linha", self)
-            remover_action.triggered.connect(self.remover_linha)
-            suporte_menu.addAction(remover_action)
-
-            sair_action = QtWidgets.QAction("Sair", self)
-            sair_action.triggered.connect(self.validar_saida)
-            suporte_menu.addAction(sair_action)
-
-        # Menu para "Operações Operação Pax"
-        if self.permissao == "operacaopax":
-            operacao_menu = menu_bar.addMenu("Operações Operação Pax")
-
-            # Adicionar ações ao menu de operação
-            salvar_action = QtWidgets.QAction("Salvar Dados", self)
-            salvar_action.triggered.connect(self.salvar_registro_multiplas_vezes)
-            operacao_menu.addAction(salvar_action)
-
-            sair_action = QtWidgets.QAction("Sair", self)
-            sair_action.triggered.connect(self.validar_saida)
-            operacao_menu.addAction(sair_action)
-
-
-        # Adiciona o layout dos botões ao layout principal
-        layout.addLayout(actions_layout)
-
-        # Define o widget central
+        # Definir o widget central
         self.setCentralWidget(central_widget)
 
      # Define cores para os títulos das colunas
@@ -532,6 +427,88 @@ class TelaOrdem(QtWidgets.QMainWindow):
                 font-size: 14px;
             }
         """)
+    def configurar_painel_inferior_com_menu(self):
+        """Configura o painel inferior com um menu fixo de botões."""
+        painel_inferior = QtWidgets.QFrame(self)
+        painel_inferior.setStyleSheet("background-color: #f0f0f0;")
+        painel_inferior.setFixedHeight(60)
+        painel_layout = QtWidgets.QHBoxLayout(painel_inferior)
+        painel_layout.setContentsMargins(10, 10, 10, 10)
+        painel_layout.setSpacing(20)
+
+        if self.permissao == "suporte":
+            # Botão "Salvar Dados"
+            salvar_button = QtWidgets.QPushButton("Salvar Dados")
+            salvar_button.setIcon(QtGui.QIcon("icons/save.png"))  # Substitua pelo caminho do ícone
+            salvar_button.setIconSize(QtCore.QSize(28, 30))  # Define o tamanho do ícone
+            salvar_button.setToolTip("Clique para salvar os dados.")  # Dica de ferramenta
+            salvar_button.clicked.connect(self.salvar_dados)
+            salvar_button.setFont(QtGui.QFont("Helvetica", 10))
+            salvar_button.setFixedSize(200, 40)  # Define o tamanho fixo do botão
+            painel_layout.addWidget(salvar_button)
+
+            # Botão "Editar Linhas"
+            editar_button = QtWidgets.QPushButton("Editar Linhas")
+            editar_button.setIcon(QtGui.QIcon("icons/edit.png"))
+            editar_button.setIconSize(QtCore.QSize(28, 30))
+            editar_button.setToolTip("Clique para editar linhas.")
+            editar_button.clicked.connect(self.editar_linha)  # Conectando o clique
+            editar_button.setFont(QtGui.QFont("Helvetica", 10))
+            editar_button.setFixedSize(200, 40)  # Define o tamanho fixo do botão
+            painel_layout.addWidget(editar_button)
+
+            # Botão "Adicionar Registro"
+            adicionar_button = QtWidgets.QPushButton("Add + campos registro")
+            adicionar_button.setIcon(QtGui.QIcon("icons/buttonadd.png"))
+            adicionar_button.setIconSize(QtCore.QSize(28, 30))
+            adicionar_button.setToolTip("Clique para adicionar campos.")
+            adicionar_button.clicked.connect(self.adicionar_linha)  # Conectando o clique
+            adicionar_button.setFont(QtGui.QFont("Helvetica", 10))
+            adicionar_button.setFixedSize(200, 40)  # Define o tamanho fixo do botão
+            painel_layout.addWidget(adicionar_button)
+
+            # Botão "Remover Registro"
+            remover_button = QtWidgets.QPushButton("Remover - campos registro")
+            remover_button.setIcon(QtGui.QIcon("icons/buttonadd2.png"))
+            remover_button.setIconSize(QtCore.QSize(28, 30))
+            remover_button.setToolTip("Clique para remover campos.")
+            remover_button.clicked.connect(self.remover_linha)  # Conectando o clique
+            remover_button.setFont(QtGui.QFont("Helvetica", 10))
+            remover_button.setFixedSize(200, 40)
+            painel_layout.addWidget(remover_button)
+
+            # Botão "Sair"
+            sair_button = QtWidgets.QPushButton("Sair")
+            sair_button.setIcon(QtGui.QIcon("icons/exit.png"))  # Substitua pelo caminho do ícone
+            sair_button.setIconSize(QtCore.QSize(28, 30))  # Define o tamanho do ícone
+            sair_button.setToolTip("Sair do sistema.")  # Dica de ferramenta
+            sair_button.clicked.connect(self.validar_saida)
+            sair_button.setFont(QtGui.QFont("Helvetica", 10))
+            sair_button.setFixedSize(200, 40)
+            painel_layout.addWidget(sair_button)
+
+        if self.permissao == "operacaopax":
+            # Botão "Salvar Dados"
+            salvar_button = QtWidgets.QPushButton("Salvar")
+            salvar_button.setIcon(QtGui.QIcon("icons/save.png"))  # Substitua pelo caminho do ícone
+            salvar_button.setIconSize(QtCore.QSize(28, 30))  # Define um tamanho menor para o ícone
+            salvar_button.setToolTip("Clique para salvar os dados.")  # Dica de ferramenta
+            salvar_button.clicked.connect(self.salvar_registro_multiplas_vezes)
+            salvar_button.setFont(QtGui.QFont("Helvetica", 10))  # Fonte menor
+            salvar_button.setFixedSize(300, 40)  # Define o tamanho fixo do botão
+            painel_layout.addWidget(salvar_button)
+
+            # Botão "Sair"
+            sair_button = QtWidgets.QPushButton("Sair")
+            sair_button.setIcon(QtGui.QIcon("icons/exit.png"))  # Substitua pelo caminho do ícone
+            sair_button.setIconSize(QtCore.QSize(28, 30))  # Define um tamanho menor para o ícone
+            sair_button.setToolTip("Sair do sistema.")  # Dica de ferramenta
+            sair_button.clicked.connect(self.validar_saida)
+            sair_button.setFont(QtGui.QFont("Helvetica", 10))  # Fonte menor
+            sair_button.setFixedSize(300, 40)  # Define o tamanho fixo do botão
+            painel_layout.addWidget(sair_button)
+
+        self.layout_principal.addWidget(painel_inferior)
 
     def abrir_filtro_avancado(self):
         """Abre o modal de filtro avançado."""
@@ -541,14 +518,18 @@ class TelaOrdem(QtWidgets.QMainWindow):
             filtros = [dialog.get_filter()]
             if not filtros[0][2]:  # Verifica se o valor do filtro está vazio
                 QMessageBox.warning(
-                    self, "Aviso", "Digite pelo menos um valor para filtrar.")
+                    self, "Aviso", "Digite pelo menos um valor para filtrar."
+                )
                 return
 
             # Verificar se todos os filtros têm exatamente três elementos
             for filtro in filtros:
                 if len(filtro) != 3:
                     QMessageBox.critical(
-                        self, "Erro", "Formato de filtro inválido. Cada filtro deve conter exatamente três elementos: coluna, operador e valor.")
+                        self,
+                        "Erro",
+                        "Formato de filtro inválido. Cada filtro deve conter exatamente três elementos: coluna, operador e valor."
+                    )
                     return
 
             self.aplicar_filtro_avancado(filtros)
@@ -568,13 +549,22 @@ class TelaOrdem(QtWidgets.QMainWindow):
 
             self.cursor.execute(query, parametros)
             dados_filtrados = self.cursor.fetchall()
-            self.atualizar_table(dados_filtrados)
+
+            if not dados_filtrados:  # Verificar se nenhum registro foi encontrado
+                QMessageBox.information(
+                    self,
+                    "Pesquisa",
+                    "Nenhum registro encontrado para os filtros aplicados."
+                )
+            else:
+                self.atualizar_table(dados_filtrados)
+
         except sqlite3.OperationalError as e:
-            QMessageBox.critical(self, "Erro", f"Erro na consulta SQL: {
-                                 e}. Verifique se o nome da coluna está correto.")
-        except Exception as e:
             QMessageBox.critical(
-                self, "Erro", f"Erro ao aplicar o filtro: {e}")
+                self, "Erro", f"Erro na consulta SQL: {e}. Verifique se o nome da coluna está correto."
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Erro", f"Erro ao aplicar o filtro: {e}")
 
     def limpar_filtro_avancado(self):
         """Limpa o filtro avançado e restaura todos os dados na tabela."""
@@ -614,9 +604,12 @@ class TelaOrdem(QtWidgets.QMainWindow):
                 cor_cliente = self.gerar_cor(cliente)
 
                 for col_num, data in enumerate(row_data):
-                    item = QtWidgets.QTableWidgetItem(str(data))
+                    # Converte valores em string para exibição e tooltip
+                    valor = str(data) if data is not None else "Valor não definido"
+                    item = QtWidgets.QTableWidgetItem(str(valor))
                     item.setTextAlignment(QtCore.Qt.AlignCenter)
                     item.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)  # Desabilita edição
+                    item.setToolTip(valor)  # Adiciona o tooltip ao item
                     self.table.setItem(row_position, col_num, item)
 
                     # Aplica a cor ao cliente
